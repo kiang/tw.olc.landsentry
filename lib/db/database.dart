@@ -226,19 +226,26 @@ class AppDatabase {
 
   Future<void> setTracking(String uid, TrackStatus status) async {
     final d = await db;
-    // Upsert keyed on point_uid; keeps the existing UUID on update.
-    await d.rawInsert('''
-      INSERT INTO tracking (id, point_uid, status, updated_at)
-      VALUES (?, ?, ?, ?)
-      ON CONFLICT(point_uid) DO UPDATE SET
-        status = excluded.status,
-        updated_at = excluded.updated_at
-    ''', [
-      _uuid.v4(),
-      uid,
-      status.name,
-      DateTime.now().toIso8601String(),
-    ]);
+    final now = DateTime.now().toIso8601String();
+    // Update-then-insert instead of ON CONFLICT DO UPDATE: that syntax
+    // needs SQLite 3.24+, which Android only ships from API 29.
+    // Keeps the existing UUID on update.
+    await d.transaction((txn) async {
+      final updated = await txn.update(
+        'tracking',
+        {'status': status.name, 'updated_at': now},
+        where: 'point_uid = ?',
+        whereArgs: [uid],
+      );
+      if (updated == 0) {
+        await txn.insert('tracking', {
+          'id': _uuid.v4(),
+          'point_uid': uid,
+          'status': status.name,
+          'updated_at': now,
+        });
+      }
+    });
   }
 
   Future<void> removeTracking(String uid) async {
