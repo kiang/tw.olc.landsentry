@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 /// User-assigned tracking status for a point.
@@ -53,12 +55,16 @@ class LogEntry {
   final String note;
   final DateTime createdAt;
 
+  /// File names of attached photos (resolved via PhotoStore).
+  final List<String> photos;
+
   LogEntry({
     this.id,
     required this.pointUid,
     this.status,
     required this.note,
     required this.createdAt,
+    this.photos = const [],
   });
 
   Map<String, Object?> toDbMap() => {
@@ -66,13 +72,22 @@ class LogEntry {
         'status': status?.name,
         'note': note,
         'created_at': createdAt.toIso8601String(),
+        'photos': jsonEncode(photos),
       };
 
-  static LogEntry fromDbMap(Map<String, Object?> m) => LogEntry(
-        id: m['id'] as int?,
-        pointUid: m['point_uid'] as String,
-        status: TrackStatus.fromName(m['status'] as String?),
-        note: (m['note'] as String?) ?? '',
-        createdAt: DateTime.parse(m['created_at'] as String),
-      );
+  static LogEntry fromDbMap(Map<String, Object?> m) {
+    List<String> photos = const [];
+    final raw = m['photos'] as String?;
+    if (raw != null && raw.isNotEmpty) {
+      photos = (jsonDecode(raw) as List).map((e) => e.toString()).toList();
+    }
+    return LogEntry(
+      id: m['id'] as int?,
+      pointUid: m['point_uid'] as String,
+      status: TrackStatus.fromName(m['status'] as String?),
+      note: (m['note'] as String?) ?? '',
+      createdAt: DateTime.parse(m['created_at'] as String),
+      photos: photos,
+    );
+  }
 }

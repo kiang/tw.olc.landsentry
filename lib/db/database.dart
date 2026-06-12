@@ -16,7 +16,12 @@ class AppDatabase {
     final path = join(await getDatabasesPath(), 'landchg.db');
     return openDatabase(
       path,
-      version: 1,
+      version: 2,
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute('ALTER TABLE logs ADD COLUMN photos TEXT');
+        }
+      },
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE points (
@@ -55,7 +60,8 @@ class AppDatabase {
             point_uid TEXT NOT NULL,
             status TEXT,
             note TEXT NOT NULL,
-            created_at TEXT NOT NULL
+            created_at TEXT NOT NULL,
+            photos TEXT
           )
         ''');
         await db.execute('CREATE INDEX idx_logs_point ON logs(point_uid)');

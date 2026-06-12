@@ -125,8 +125,21 @@ class _TrackedScreenState extends State<TrackedScreen> {
           children: [
             Text('${p.city} ${p.year}年'),
             if (latest != null && latest.note.isNotEmpty)
-              Text('最新紀錄：${latest.note}',
-                  maxLines: 1, overflow: TextOverflow.ellipsis),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text('最新紀錄：${latest.note}',
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ),
+                  if (latest.photos.isNotEmpty) ...[
+                    const Icon(Icons.photo_camera,
+                        size: 14, color: Colors.grey),
+                    Text(' ${latest.photos.length}',
+                        style: const TextStyle(
+                            fontSize: 12, color: Colors.grey)),
+                  ],
+                ],
+              ),
             Text(df.format(t.updatedAt),
                 style: const TextStyle(fontSize: 11, color: Colors.grey)),
           ],

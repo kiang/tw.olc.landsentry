@@ -16,7 +16,9 @@ CSV per city/year (ROC era) from
   markers — red for 違規, blue for others; tap a marker for a quick summary.
 - **清單**: searchable/filterable point list (case ID, type, agency, 違規 only).
 - **追蹤**: per-point tracking status (追蹤中 / 已改善 / 無變化 / 惡化中 / 已結案)
-  with a timestamped log timeline; all stored locally in SQLite.
+  with a timestamped log timeline; all stored locally in SQLite. Log entries
+  support photo attachments (camera or gallery via the system photo picker);
+  photos are stored in app documents and viewable fullscreen with pinch-zoom.
 - **資料**: download/update/delete datasets per city + year; deleting a dataset
   keeps tracked points and their history.
 - Detail page: orthophoto mini-map, all CSV fields, links to Google/Bing

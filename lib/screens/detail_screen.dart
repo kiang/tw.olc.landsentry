@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -10,6 +13,7 @@ import '../constants.dart';
 import '../db/database.dart';
 import '../models/point.dart';
 import '../models/tracking.dart';
+import '../services/photo_store.dart';
 
 class DetailScreen extends StatefulWidget {
   final String uid;
@@ -25,6 +29,8 @@ class _DetailScreenState extends State<DetailScreen> {
   List<LogEntry> _logs = [];
   final TextEditingController _noteController = TextEditingController();
   TrackStatus _newStatus = TrackStatus.watching;
+  final List<String> _pendingPhotos = [];
+  bool _pickingPhoto = false;
 
   static const _importantFields = ['變異點編號', '變異類型', '查證結果', '變異點位置', '通報機關', '權責單位'];
 
@@ -36,6 +42,9 @@ class _DetailScreenState extends State<DetailScreen> {
 
   @override
   void dispose() {
+    for (final name in _pendingPhotos) {
+      PhotoStore.delete(name);
+    }
     _noteController.dispose();
     super.dispose();
   }
@@ -58,9 +67,12 @@ class _DetailScreenState extends State<DetailScreen> {
     final note = _noteController.text.trim();
     final db = AppDatabase.instance;
     final statusChanged = _tracking?.status != _newStatus;
-    if (note.isEmpty && !statusChanged && _tracking != null) {
+    if (note.isEmpty &&
+        _pendingPhotos.isEmpty &&
+        !statusChanged &&
+        _tracking != null) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('請輸入紀錄內容或變更狀態')));
+          .showSnackBar(const SnackBar(content: Text('請輸入紀錄內容、附上照片或變更狀態')));
       return;
     }
     await db.setTracking(widget.uid, _newStatus);
@@ -71,11 +83,107 @@ class _DetailScreenState extends State<DetailScreen> {
           ? (_tracking == null ? '開始追蹤' : '狀態更新為「${_newStatus.label}」')
           : note,
       createdAt: DateTime.now(),
+      photos: List.of(_pendingPhotos),
     ));
+    _pendingPhotos.clear();
     _noteController.clear();
     if (mounted) FocusScope.of(context).unfocus();
     AppState.instance.notifyDataChanged();
     await _load();
+  }
+
+  Future<void> _pickPhoto(ImageSource source) async {
+    if (_pickingPhoto) return;
+    setState(() => _pickingPhoto = true);
+    try {
+      final picked = await ImagePicker()
+          .pickImage(source: source, maxWidth: 1920, imageQuality: 85);
+      if (picked != null) {
+        final name = await PhotoStore.import(picked);
+        if (mounted) setState(() => _pendingPhotos.add(name));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('無法取得照片')));
+      }
+    } finally {
+      if (mounted) setState(() => _pickingPhoto = false);
+    }
+  }
+
+  Future<void> _removePending(String name) async {
+    await PhotoStore.delete(name);
+    if (mounted) setState(() => _pendingPhotos.remove(name));
+  }
+
+  void _viewPhoto(String name) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog.fullscreen(
+        backgroundColor: Colors.black,
+        child: Stack(
+          children: [
+            Center(
+              child: InteractiveViewer(
+                maxScale: 5,
+                child: Image.file(File(PhotoStore.pathFor(name))),
+              ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: SafeArea(
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _photoThumb(String name,
+      {VoidCallback? onRemove, double size = 64}) {
+    return Stack(
+      children: [
+        GestureDetector(
+          onTap: () => _viewPhoto(name),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.file(
+              File(PhotoStore.pathFor(name)),
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => Container(
+                width: size,
+                height: size,
+                color: Colors.black12,
+                child: const Icon(Icons.broken_image, color: Colors.grey),
+              ),
+            ),
+          ),
+        ),
+        if (onRemove != null)
+          Positioned(
+            top: 0,
+            right: 0,
+            child: GestureDetector(
+              onTap: onRemove,
+              child: Container(
+                decoration: const BoxDecoration(
+                    color: Colors.black54, shape: BoxShape.circle),
+                child:
+                    const Icon(Icons.close, color: Colors.white, size: 16),
+              ),
+            ),
+          ),
+      ],
+    );
   }
 
   Future<void> _stopTracking() async {
@@ -328,6 +436,45 @@ class _DetailScreenState extends State<DetailScreen> {
                 isDense: true,
               ),
             ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.photo_camera, size: 18),
+                  label: const Text('拍照'),
+                  onPressed: _pickingPhoto
+                      ? null
+                      : () => _pickPhoto(ImageSource.camera),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.photo_library, size: 18),
+                  label: const Text('相簿'),
+                  onPressed: _pickingPhoto
+                      ? null
+                      : () => _pickPhoto(ImageSource.gallery),
+                ),
+                if (_pickingPhoto) ...[
+                  const SizedBox(width: 12),
+                  const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2)),
+                ],
+              ],
+            ),
+            if (_pendingPhotos.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _pendingPhotos
+                      .map((name) => _photoThumb(name,
+                          onRemove: () => _removePending(name)))
+                      .toList(),
+                ),
+              ),
             const SizedBox(height: 10),
             SizedBox(
               width: double.infinity,
@@ -371,6 +518,17 @@ class _DetailScreenState extends State<DetailScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(log.note),
+                          if (log.photos.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: log.photos
+                                    .map((name) => _photoThumb(name))
+                                    .toList(),
+                              ),
+                            ),
                           Text(
                             '${status != null ? '${status.label}・' : ''}${df.format(log.createdAt)}',
                             style: const TextStyle(

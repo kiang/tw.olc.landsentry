@@ -5,9 +5,11 @@ import 'screens/download_screen.dart';
 import 'screens/list_screen.dart';
 import 'screens/map_screen.dart';
 import 'screens/tracked_screen.dart';
+import 'services/photo_store.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await PhotoStore.init();
   runApp(const LandChgApp());
 }
 
