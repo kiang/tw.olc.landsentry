@@ -52,26 +52,38 @@ flutter build apk --release --split-per-abi
 adb install -r build/app/outputs/flutter-apk/app-release.apk
 ```
 
-## 正式簽章（發佈前必做）
+## 步驟一：建立簽章金鑰（發佈前必做，一次性）
 
 目前 `android/app/build.gradle.kts` 的 release 仍使用 debug 簽章
-（檔內有 TODO 註記），上架前需建立正式 keystore：
+（檔內有 TODO 註記），上架前必須改用正式金鑰。
+
+### 1. 產生 upload keystore
 
 ```bash
-keytool -genkey -v -keystore ~/landsentry-release.jks \
-  -keyalg RSA -keysize 2048 -validity 10000 -alias landsentry
+keytool -genkey -v -keystore ~/landsentry-upload.jks \
+  -keyalg RSA -keysize 2048 -validity 10000 -alias upload
 ```
 
-建立 `android/key.properties`（**勿提交版本控制**，已在 .gitignore 建議加入）：
+依提示輸入密碼與識別資訊（姓名/組織/城市等）。
+
+**金鑰保管**：
+- keystore 檔與密碼遺失將無法再更新 app（除非已啟用 Play App Signing，
+  見步驟三），請備份到安全位置（密碼管理器 + 離線備份）。
+- 絕對不要把 keystore 或密碼提交進版本控制
+  （`android/.gitignore` 已排除 `key.properties`、`*.keystore`、`*.jks`）。
+
+### 2. 建立 `android/key.properties`
 
 ```properties
-storePassword=<密碼>
-keyPassword=<密碼>
-keyAlias=landsentry
-storeFile=/home/<user>/landsentry-release.jks
+storePassword=<keystore 密碼>
+keyPassword=<key 密碼>
+keyAlias=upload
+storeFile=/home/<user>/landsentry-upload.jks
 ```
 
-修改 `android/app/build.gradle.kts`：
+### 3. 修改 `android/app/build.gradle.kts`
+
+檔案開頭（`plugins` 區塊之前）加入：
 
 ```kotlin
 import java.util.Properties
@@ -81,8 +93,15 @@ val keystoreProperties = Properties().apply {
     val f = rootProject.file("key.properties")
     if (f.exists()) load(FileInputStream(f))
 }
+```
 
+`android { }` 內加入 signingConfigs，並把 release buildType 改為使用它
+（取代現有的 `signingConfig = signingConfigs.getByName("debug")`）：
+
+```kotlin
 android {
+    // ...既有設定...
+
     signingConfigs {
         create("release") {
             keyAlias = keystoreProperties["keyAlias"] as String
@@ -99,27 +118,106 @@ android {
 }
 ```
 
-**注意**：換成正式簽章後，先前以 debug 簽章安裝的版本必須移除才能更新安裝。
+### 4. 驗證簽章
 
-## 發佈到 Google Play
+```bash
+flutter build apk --release
+~/Android/Sdk/build-tools/36.0.0/apksigner verify --print-certs \
+  build/app/outputs/flutter-apk/app-release.apk
+```
 
-1. 調整版本號：`pubspec.yaml` 的 `version: 1.0.0+1`
-   （`+` 後為 versionCode，每次上傳必須遞增）。
-2. 建置 App Bundle：
+輸出的憑證資訊應對應你在 keytool 輸入的識別資訊（而非 Android Debug）。
+
+**注意**：換成正式簽章後，先前以 debug 簽章安裝的版本必須先解除安裝
+（`adb uninstall tw.olc.landsentry`）才能安裝新簽章版本。
+
+## 步驟二：建置上架用 App Bundle
+
+1. 每次上傳前調整 `pubspec.yaml` 版本號：
+
+   ```yaml
+   version: 1.0.0+1   # 格式：versionName+versionCode
+   ```
+
+   `+` 後的 versionCode 每次上傳 **必須遞增**；前面的 versionName
+   是使用者看到的版本。
+
+2. 建置：
 
    ```bash
    flutter build appbundle --release
    # 輸出：build/app/outputs/bundle/release/app-release.aab
    ```
 
-3. 在 [Play Console](https://play.google.com/console) 建立應用程式
-   （套件名稱 `tw.olc.landsentry`），上傳 `.aab`。
-4. 填寫商店資訊與審查必要項目，與本 app 相關的重點：
-   - **權限聲明**：定位（`ACCESS_FINE_LOCATION`，用於地圖定位與距離計算）。
-     相機/相簿經由系統 photo picker，不需額外權限聲明。
-   - **資料安全表單**：所有追蹤資料與照片僅儲存在裝置本機 SQLite 與
-     app 私有目錄；分享為使用者主動匯出，app 不上傳任何資料到伺服器。
-   - 隱私權政策網址（Play 要求有定位權限的 app 必須提供）。
+3. 上傳前先用 APK 在實機做最後測試（aab 不能直接安裝）：
+
+   ```bash
+   flutter build apk --release && adb install -r build/app/outputs/flutter-apk/app-release.apk
+   ```
+
+## 步驟三：Play Console 上架流程
+
+### 建立開發者帳號與應用程式
+
+1. 註冊 [Google Play Console](https://play.google.com/console) 開發者帳號
+   （一次性費用 US$25）。
+2. 「建立應用程式」：
+   - 應用程式名稱：**國土巡守隊**
+   - 預設語言：繁體中文 (zh-TW)
+   - 類型：應用程式；價格：免費
+3. 第一次上傳 `.aab` 時套件名稱會自動鎖定為 `tw.olc.landsentry`，
+   之後無法更改。
+
+### 啟用 Play App Signing（建議）
+
+首次上傳 aab 時 Play 會引導加入 **Play App Signing**：Google 保管
+正式簽署金鑰，你手上的 keystore 作為 upload key。好處是 upload key
+遺失時可向 Google 申請重設，不會永久失去更新能力。依預設流程
+「使用 Google 產生的金鑰」即可。
+
+### 填寫應用程式內容（App content）
+
+審查必填項目，依本 app 的實際情況：
+
+| 項目 | 填寫內容 |
+|------|----------|
+| 隱私權政策 | 必填（app 要求定位權限）。提供一個說明資料僅存於裝置本機的網頁網址 |
+| 廣告 | 無廣告 |
+| 應用程式存取權 | 所有功能皆可直接使用，無需登入（選「無特殊存取需求」） |
+| 內容分級 | 填問卷；本 app 無使用者產生之公開內容、無暴力等，通常為 3+ |
+| 目標對象 | 18 歲以上（或 13+；非兒童導向） |
+| 資料安全 | 見下方 |
+| 政府 app | 否（民間開放資料應用） |
+
+**資料安全表單**重點：追蹤紀錄、照片、定位皆只在裝置端處理與儲存，
+app 沒有後端伺服器、不傳輸任何使用者資料 → 可宣告
+「不收集、不分享任何使用者資料」。匯出 zip 為使用者主動操作，
+不屬於 app 的資料收集。
+
+### 商店資訊（Store listing)
+
+- 簡短說明（80 字內）與完整說明：可參考 README 的功能介紹。
+- 圖示：512×512（可由 `assets/icon/icon.png` 縮製）。
+- 主題圖片 (feature graphic)：1024×500。
+- 截圖：手機截圖至少 2 張（地圖、追蹤頁建議入鏡）。
+
+### 發佈
+
+1. 建議先走 **內部測試**（Internal testing）：上傳 aab、加入測試者
+   email，確認安裝與更新流程正常。
+2. 沒問題後在 **正式版**（Production）建立版本：上傳同一個 aab、
+   填寫版本資訊（release notes），送出審查。
+3. 首次審查通常需數天；通過後即上架。
+
+### 後續更新
+
+```bash
+# 1. pubspec.yaml versionCode +1（例如 1.0.1+2）
+# 2. 重新建置並上傳
+flutter build appbundle --release
+```
+
+到 Play Console 的正式版建立新版本、上傳 aab、填寫更新說明、送審。
 
 ## 測試與檢查
 
