@@ -33,6 +33,13 @@ CSV per city/year (ROC era) from
   (e.g. a Drive folder) and merges it — newer tracking status wins, logs
   union by UUID, photos copied if missing.
 
+## Documentation
+
+- [建置與發佈指南](docs/build.md) — environment, release builds, signing,
+  Play Store publishing, icon regeneration
+- [使用指南](docs/usage.md) — per-feature usage guide (map, list, tracking,
+  photo logs, GPS/navigation, Drive export/import)
+
 ## Build
 
 ```
