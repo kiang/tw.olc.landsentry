@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:landchg_tracker/db/database.dart';
-import 'package:landchg_tracker/models/point.dart';
-import 'package:landchg_tracker/models/tracking.dart';
+import 'package:landsentry/db/database.dart';
+import 'package:landsentry/models/point.dart';
+import 'package:landsentry/models/tracking.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 

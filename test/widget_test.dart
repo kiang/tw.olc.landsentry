@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-import 'package:landchg_tracker/main.dart';
+import 'package:landsentry/main.dart';
 
 void main() {
   setUpAll(() {

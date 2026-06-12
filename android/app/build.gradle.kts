@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "tw.olc.landchg_tracker"
+    namespace = "tw.olc.landsentry"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,7 +21,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "tw.olc.landchg_tracker"
+        applicationId = "tw.olc.landsentry"
         // Android 7.0+ covers virtually all devices in the field.
         minSdk = 24
         targetSdk = flutter.targetSdkVersion

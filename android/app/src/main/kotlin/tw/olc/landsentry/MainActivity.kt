@@ -1,4 +1,4 @@
-package tw.olc.landchg_tracker
+package tw.olc.landsentry
 
 import io.flutter.embedding.android.FlutterActivity
 

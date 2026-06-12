@@ -152,7 +152,7 @@ class _MapScreenState extends State<MapScreen> {
                 urlTemplate: _usePhotoLayer
                     ? AppConstants.nlscPhotoUrl
                     : AppConstants.nlscEmapUrl,
-                userAgentPackageName: 'tw.olc.landchg_tracker',
+                userAgentPackageName: 'tw.olc.landsentry',
                 maxZoom: 19,
               ),
               MarkerClusterLayerWidget(

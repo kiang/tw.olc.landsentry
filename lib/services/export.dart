@@ -21,7 +21,7 @@ typedef ImportSummary = ({int tracking, int logs, int points, int photos});
 /// sheet (e.g. save to Google Drive); import reads a file picked from
 /// any document provider (e.g. a Google Drive folder).
 class ExportService {
-  static const _format = 'landchg-tracking';
+  static const _format = 'landsentry-tracking';
   static const _formatVersion = 1;
 
   static Future<File> buildArchive() async {
@@ -89,7 +89,7 @@ class ExportService {
 
     final stamp = DateFormat('yyyyMMdd_HHmm').format(DateTime.now());
     final dir = await getTemporaryDirectory();
-    final out = File('${dir.path}/landchg_tracking_$stamp.zip');
+    final out = File('${dir.path}/landsentry_$stamp.zip');
     await out.writeAsBytes(ZipEncoder().encodeBytes(archive));
     return out;
   }
@@ -99,7 +99,7 @@ class ExportService {
     final file = await buildArchive();
     await SharePlus.instance.share(ShareParams(
       files: [XFile(file.path, mimeType: 'application/zip')],
-      subject: '國土監測追蹤資料',
+      subject: '國土巡守隊資料',
     ));
   }
 

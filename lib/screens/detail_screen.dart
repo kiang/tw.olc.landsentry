@@ -271,7 +271,7 @@ class _DetailScreenState extends State<DetailScreen> {
           children: [
             TileLayer(
               urlTemplate: AppConstants.nlscPhotoUrl,
-              userAgentPackageName: 'tw.olc.landchg_tracker',
+              userAgentPackageName: 'tw.olc.landsentry',
               maxZoom: 19,
             ),
             MarkerLayer(markers: [

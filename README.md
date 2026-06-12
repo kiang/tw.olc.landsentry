@@ -1,4 +1,4 @@
-# 國土監測追蹤 (landchg_tracker)
+# LandSentry 國土巡守隊 (landsentry)
 
 Flutter Android app for downloading 國土利用監測 (land-use change detection)
 points and locally logging / tracking the status of each point. Companion to
