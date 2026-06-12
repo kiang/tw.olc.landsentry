@@ -52,73 +52,37 @@ flutter build apk --release --split-per-abi
 adb install -r build/app/outputs/flutter-apk/app-release.apk
 ```
 
-## 步驟一：建立簽章金鑰（發佈前必做，一次性）
+## 步驟一：簽章金鑰（已設定完成）
 
-目前 `android/app/build.gradle.kts` 的 release 仍使用 debug 簽章
-（檔內有 TODO 註記），上架前必須改用正式金鑰。
+本專案的 release 簽章**已設定**：
 
-### 1. 產生 upload keystore
+| 項目 | 位置 |
+|------|------|
+| Keystore | `keys/landsentry-release.keystore`（alias：`landsentry`） |
+| 密碼設定 | `android/key.properties` |
+| Gradle 設定 | `android/app/build.gradle.kts`（無 key.properties 的機器自動退回 debug 簽章，仍可建置） |
 
-```bash
-keytool -genkey -v -keystore ~/landsentry-upload.jks \
-  -keyalg RSA -keysize 2048 -validity 10000 -alias upload
-```
+兩個檔案皆已被 .gitignore 排除，**不會**進入版本控制。
 
-依提示輸入密碼與識別資訊（姓名/組織/城市等）。
+**金鑰保管（重要）**：
+- 請把 `keys/landsentry-release.keystore` 與 `android/key.properties`
+  （內含密碼）備份到安全位置（密碼管理器 + 離線備份）。
+- 遺失金鑰與密碼將無法再更新 app（除非已啟用 Play App Signing，
+  見步驟三，屆時此金鑰僅為可重設的 upload key）。
 
-**金鑰保管**：
-- keystore 檔與密碼遺失將無法再更新 app（除非已啟用 Play App Signing，
-  見步驟三），請備份到安全位置（密碼管理器 + 離線備份）。
-- 絕對不要把 keystore 或密碼提交進版本控制
-  （`android/.gitignore` 已排除 `key.properties`、`*.keystore`、`*.jks`）。
+### 在新機器重建簽章環境
 
-### 2. 建立 `android/key.properties`
+把備份的 keystore 放回 `keys/`、`key.properties` 放回 `android/`
+即可。`key.properties` 格式：
 
 ```properties
-storePassword=<keystore 密碼>
-keyPassword=<key 密碼>
-keyAlias=upload
-storeFile=/home/<user>/landsentry-upload.jks
+storePassword=<密碼>
+keyPassword=<密碼>
+keyAlias=landsentry
+storeFile=../../keys/landsentry-release.keystore
 ```
 
-### 3. 修改 `android/app/build.gradle.kts`
-
-檔案開頭（`plugins` 區塊之前）加入：
-
-```kotlin
-import java.util.Properties
-import java.io.FileInputStream
-
-val keystoreProperties = Properties().apply {
-    val f = rootProject.file("key.properties")
-    if (f.exists()) load(FileInputStream(f))
-}
-```
-
-`android { }` 內加入 signingConfigs，並把 release buildType 改為使用它
-（取代現有的 `signingConfig = signingConfigs.getByName("debug")`）：
-
-```kotlin
-android {
-    // ...既有設定...
-
-    signingConfigs {
-        create("release") {
-            keyAlias = keystoreProperties["keyAlias"] as String
-            keyPassword = keystoreProperties["keyPassword"] as String
-            storeFile = file(keystoreProperties["storeFile"] as String)
-            storePassword = keystoreProperties["storePassword"] as String
-        }
-    }
-    buildTypes {
-        release {
-            signingConfig = signingConfigs.getByName("release")
-        }
-    }
-}
-```
-
-### 4. 驗證簽章
+### 驗證簽章
 
 ```bash
 flutter build apk --release
