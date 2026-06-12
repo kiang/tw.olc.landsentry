@@ -39,6 +39,8 @@ CSV per city/year (ROC era) from
   Play Store publishing, icon regeneration
 - [使用指南](docs/usage.md) — per-feature usage guide (map, list, tracking,
   photo logs, GPS/navigation, Drive export/import)
+- [Play Store 商店文案](docs/play-store-listing.md) — paste-ready listing
+  text, privacy policy draft, data-safety answers
 
 ## Build
 
