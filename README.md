@@ -1,0 +1,38 @@
+# 國土監測追蹤 (landchg_tracker)
+
+Flutter Android app for downloading 國土利用監測 (land-use change detection)
+points and locally logging / tracking the status of each point. Companion to
+the web map at https://tainan.olc.tw/p/landchg/.
+
+## Data source
+
+CSV per city/year (ROC era) from
+`https://kiang.github.io/landchg.tcd.gov.tw/csv/points/{year}/{city}.csv`
+(originally from 內政部國土利用監測整合資訊網, landchg.tcd.gov.tw).
+
+## Features
+
+- **地圖**: NLSC base layers (電子地圖 EMAP / 正射影像 PHOTO2) with clustered
+  markers — red for 違規, blue for others; tap a marker for a quick summary.
+- **清單**: searchable/filterable point list (case ID, type, agency, 違規 only).
+- **追蹤**: per-point tracking status (追蹤中 / 已改善 / 無變化 / 惡化中 / 已結案)
+  with a timestamped log timeline; all stored locally in SQLite.
+- **資料**: download/update/delete datasets per city + year; deleting a dataset
+  keeps tracked points and their history.
+- Detail page: orthophoto mini-map, all CSV fields, links to Google/Bing
+  satellite and landchg.olc.tw case page.
+
+## Build
+
+```
+flutter pub get
+flutter build apk --release   # build/app/outputs/flutter-apk/app-release.apk
+```
+
+## Structure
+
+- `lib/constants.dart` — data URL, city list, NLSC tile URLs
+- `lib/db/database.dart` — SQLite schema (points, datasets, tracking, logs)
+- `lib/services/api.dart` — CSV download + parse
+- `lib/screens/` — map / list / tracked / detail / download screens
+- `lib/widgets/` — shared filter bar, point bottom sheet
