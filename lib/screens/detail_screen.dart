@@ -13,6 +13,8 @@ import '../constants.dart';
 import '../db/database.dart';
 import '../models/point.dart';
 import '../models/tracking.dart';
+import '../services/location.dart';
+import '../services/navigation.dart';
 import '../services/photo_store.dart';
 
 class DetailScreen extends StatefulWidget {
@@ -373,6 +375,16 @@ class _DetailScreenState extends State<DetailScreen> {
         child: Wrap(
           spacing: 8,
           children: [
+            TextButton.icon(
+              icon: const Icon(Icons.navigation, size: 18),
+              label: Builder(builder: (_) {
+                final d = LocationService.distanceTo(p.lat, p.lng);
+                return Text(d == null
+                    ? '導航前往'
+                    : '導航前往（約 ${LocationService.formatDistance(d)}）');
+              }),
+              onPressed: () => navigateToPoint(p.lat, p.lng),
+            ),
             TextButton.icon(
               icon: const Icon(Icons.satellite_alt, size: 18),
               label: const Text('Google 衛星'),

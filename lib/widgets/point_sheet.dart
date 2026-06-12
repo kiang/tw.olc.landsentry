@@ -6,6 +6,8 @@ import '../db/database.dart';
 import '../models/point.dart';
 import '../models/tracking.dart';
 import '../screens/detail_screen.dart';
+import '../services/location.dart';
+import '../services/navigation.dart';
 
 /// Quick summary bottom sheet shown when a marker is tapped.
 Future<void> showPointSheet(BuildContext context, ChangePoint p) async {
@@ -48,6 +50,18 @@ Future<void> showPointSheet(BuildContext context, ChangePoint p) async {
             if ((p.props['權責單位'] ?? '').isNotEmpty)
               Text('權責單位：${p.props['權責單位']}'),
             Text('${p.city} ${p.year}年'),
+            Builder(builder: (_) {
+              final d = LocationService.distanceTo(p.lat, p.lng);
+              if (d == null) return const SizedBox.shrink();
+              return Row(
+                children: [
+                  const Icon(Icons.near_me, size: 16, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Text('距離約 ${LocationService.formatDistance(d)}',
+                      style: const TextStyle(color: Colors.grey)),
+                ],
+              );
+            }),
             if (tracking != null)
               Padding(
                 padding: const EdgeInsets.only(top: 6),
@@ -79,27 +93,38 @@ Future<void> showPointSheet(BuildContext context, ChangePoint p) async {
                   ),
                 ),
                 const SizedBox(width: 12),
-                if (tracking == null)
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      icon: const Icon(Icons.star_border),
-                      label: const Text('加入追蹤'),
-                      onPressed: () async {
-                        final db = AppDatabase.instance;
-                        await db.setTracking(p.uid, TrackStatus.watching);
-                        await db.addLog(LogEntry(
-                          pointUid: p.uid,
-                          status: TrackStatus.watching,
-                          note: '開始追蹤',
-                          createdAt: DateTime.now(),
-                        ));
-                        AppState.instance.notifyDataChanged();
-                        if (ctx.mounted) Navigator.pop(ctx);
-                      },
-                    ),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.navigation),
+                    label: const Text('導航'),
+                    onPressed: () => navigateToPoint(p.lat, p.lng),
                   ),
+                ),
               ],
             ),
+            if (tracking == null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.star_border),
+                    label: const Text('加入追蹤'),
+                    onPressed: () async {
+                      final db = AppDatabase.instance;
+                      await db.setTracking(p.uid, TrackStatus.watching);
+                      await db.addLog(LogEntry(
+                        pointUid: p.uid,
+                        status: TrackStatus.watching,
+                        note: '開始追蹤',
+                        createdAt: DateTime.now(),
+                      ));
+                      AppState.instance.notifyDataChanged();
+                      if (ctx.mounted) Navigator.pop(ctx);
+                    },
+                  ),
+                ),
+              ),
           ],
         ),
       );

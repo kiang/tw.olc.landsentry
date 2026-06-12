@@ -23,6 +23,9 @@ CSV per city/year (ROC era) from
   keeps tracked points and their history.
 - Detail page: orthophoto mini-map, all CSV fields, links to Google/Bing
   satellite and landchg.olc.tw case page.
+- GPS: my-location button on the map (blue dot, live updates), distance to
+  the point shown in the marker sheet and detail page, and 導航 buttons that
+  launch Google Maps turn-by-turn navigation (web directions fallback).
 
 ## Build
 

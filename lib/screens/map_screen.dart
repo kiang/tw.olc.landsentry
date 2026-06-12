@@ -7,6 +7,7 @@ import '../app_state.dart';
 import '../constants.dart';
 import '../db/database.dart';
 import '../models/point.dart';
+import '../services/location.dart';
 import '../widgets/dataset_picker.dart';
 import '../widgets/point_sheet.dart';
 
@@ -29,6 +30,7 @@ class _MapScreenState extends State<MapScreen> {
   bool _loading = true;
   bool _usePhotoLayer = false;
   bool _mapReady = false;
+  bool _locating = false;
   String _loadedKey = '';
 
   @override
@@ -72,6 +74,20 @@ class _MapScreenState extends State<MapScreen> {
       _loadedKey = key;
     });
     if (datasetChanged && points.isNotEmpty) _fitBounds();
+  }
+
+  Future<void> _goToMyLocation() async {
+    if (_locating) return;
+    setState(() => _locating = true);
+    final pos = await LocationService.locate();
+    if (!mounted) return;
+    setState(() => _locating = false);
+    if (pos == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('無法取得定位，請確認已開啟定位權限與 GPS')));
+      return;
+    }
+    _mapController.move(LatLng(pos.latitude, pos.longitude), 16);
   }
 
   void _fitBounds() {
@@ -176,6 +192,29 @@ class _MapScreenState extends State<MapScreen> {
                   },
                 ),
               ),
+              ValueListenableBuilder(
+                valueListenable: LocationService.position,
+                builder: (context, pos, _) {
+                  if (pos == null) return const SizedBox.shrink();
+                  return MarkerLayer(markers: [
+                    Marker(
+                      point: LatLng(pos.latitude, pos.longitude),
+                      width: 22,
+                      height: 22,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.blue,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 3),
+                          boxShadow: const [
+                            BoxShadow(color: Colors.black38, blurRadius: 6)
+                          ],
+                        ),
+                      ),
+                    ),
+                  ]);
+                },
+              ),
               const SimpleAttributionWidget(
                 source: Text(AppConstants.nlscAttribution,
                     style: TextStyle(fontSize: 11)),
@@ -215,6 +254,18 @@ class _MapScreenState extends State<MapScreen> {
             tooltip: '顯示全部點位',
             onPressed: _fitBounds,
             child: const Icon(Icons.zoom_out_map),
+          ),
+          const SizedBox(height: 8),
+          FloatingActionButton.small(
+            heroTag: 'locate',
+            tooltip: '我的位置',
+            onPressed: _goToMyLocation,
+            child: _locating
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.my_location),
           ),
         ],
       ),
