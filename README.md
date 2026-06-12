@@ -26,6 +26,12 @@ CSV per city/year (ROC era) from
 - GPS: my-location button on the map (blue dot, live updates), distance to
   the point shown in the marker sheet and detail page, and 導航 buttons that
   launch Google Maps turn-by-turn navigation (web directions fallback).
+- Sharing: tracking records and logs use UUID primary keys (points keep their
+  government-issued ID) so data from different users merges cleanly. 匯出分享
+  packs tracking + logs + photos into one zip via the share sheet (e.g. save
+  to Google Drive); 匯入合併 picks an archive from any document provider
+  (e.g. a Drive folder) and merges it — newer tracking status wins, logs
+  union by UUID, photos copied if missing.
 
 ## Build
 

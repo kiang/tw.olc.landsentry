@@ -1,6 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
+
+const _uuid = Uuid();
 
 /// User-assigned tracking status for a point.
 enum TrackStatus {
@@ -24,22 +27,33 @@ enum TrackStatus {
   }
 }
 
-/// Tracking record for one point.
+/// Tracking record for one point. Uses a UUID primary key so records
+/// created by different users can be merged when shared.
 class Tracking {
+  final String id;
   final String pointUid;
   final TrackStatus status;
   final DateTime updatedAt;
 
   Tracking({
+    String? id,
     required this.pointUid,
     required this.status,
     required this.updatedAt,
-  });
+  }) : id = id ?? _uuid.v4();
+
+  Map<String, Object?> toDbMap() => {
+        'id': id,
+        'point_uid': pointUid,
+        'status': status.name,
+        'updated_at': updatedAt.toIso8601String(),
+      };
 
   static Tracking? fromDbMap(Map<String, Object?> m) {
     final status = TrackStatus.fromName(m['status'] as String?);
     if (status == null) return null;
     return Tracking(
+      id: m['id'] as String?,
       pointUid: m['point_uid'] as String,
       status: status,
       updatedAt: DateTime.parse(m['updated_at'] as String),
@@ -47,9 +61,10 @@ class Tracking {
   }
 }
 
-/// One log entry in a point's tracking history.
+/// One log entry in a point's tracking history. Uses a UUID primary key
+/// so logs from different users can be merged without collisions.
 class LogEntry {
-  final int? id;
+  final String id;
   final String pointUid;
   final TrackStatus? status;
   final String note;
@@ -59,15 +74,16 @@ class LogEntry {
   final List<String> photos;
 
   LogEntry({
-    this.id,
+    String? id,
     required this.pointUid,
     this.status,
     required this.note,
     required this.createdAt,
     this.photos = const [],
-  });
+  }) : id = id ?? _uuid.v4();
 
   Map<String, Object?> toDbMap() => {
+        'id': id,
         'point_uid': pointUid,
         'status': status?.name,
         'note': note,
@@ -82,7 +98,7 @@ class LogEntry {
       photos = (jsonDecode(raw) as List).map((e) => e.toString()).toList();
     }
     return LogEntry(
-      id: m['id'] as int?,
+      id: m['id'] as String?,
       pointUid: m['point_uid'] as String,
       status: TrackStatus.fromName(m['status'] as String?),
       note: (m['note'] as String?) ?? '',

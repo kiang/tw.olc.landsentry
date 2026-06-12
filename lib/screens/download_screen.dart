@@ -5,6 +5,7 @@ import '../app_state.dart';
 import '../constants.dart';
 import '../db/database.dart';
 import '../models/point.dart';
+import '../services/export.dart';
 import '../widgets/dataset_picker.dart';
 
 class DownloadScreen extends StatefulWidget {
@@ -19,6 +20,8 @@ class _DownloadScreenState extends State<DownloadScreen> {
   List<Dataset> _datasets = [];
   String _city = AppConstants.defaultCity;
   int _year = AppConstants.currentRocYear;
+  bool _exporting = false;
+  bool _importing = false;
 
   @override
   void initState() {
@@ -66,6 +69,57 @@ class _DownloadScreenState extends State<DownloadScreen> {
     await AppDatabase.instance.deleteDataset(d.city, d.year);
     AppState.instance.notifyDataChanged();
     await _load();
+  }
+
+  Future<void> _export() async {
+    setState(() => _exporting = true);
+    try {
+      await ExportService.exportAndShare();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('匯出失敗')));
+      }
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
+
+  Future<void> _import() async {
+    setState(() => _importing = true);
+    try {
+      final summary = await ExportService.pickAndImport();
+      if (summary == null) return; // user cancelled
+      AppState.instance.notifyDataChanged();
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('匯入完成'),
+          content: Text('追蹤狀態：${summary.tracking} 筆\n'
+              '追蹤紀錄：${summary.logs} 筆\n'
+              '變異點：${summary.points} 筆\n'
+              '照片：${summary.photos} 張'),
+          actions: [
+            FilledButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('確定')),
+          ],
+        ),
+      );
+    } on FormatException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('匯入失敗：${e.message}')));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('匯入失敗，檔案無法讀取')));
+      }
+    } finally {
+      if (mounted) setState(() => _importing = false);
+    }
   }
 
   @override
@@ -171,6 +225,58 @@ class _DownloadScreenState extends State<DownloadScreen> {
                   onTap: () => _state.setDataset(d.city, d.year),
                 ),
               )),
+          const SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('追蹤資料分享',
+                      style: TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  const Text(
+                    '將追蹤狀態、紀錄與照片打包成單一檔案，可儲存到 Google 雲端硬碟分享給其他使用者；'
+                    '匯入時從雲端硬碟選取對方分享的檔案，紀錄會自動合併。',
+                    style: TextStyle(fontSize: 13, height: 1.5),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: FilledButton.icon(
+                          icon: _exporting
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: Colors.white))
+                              : const Icon(Icons.upload),
+                          label: const Text('匯出分享'),
+                          onPressed: _exporting ? null : _export,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          icon: _importing
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2))
+                              : const Icon(Icons.download),
+                          label: const Text('匯入合併'),
+                          onPressed: _importing ? null : _import,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(height: 16),
           const Card(
             child: Padding(
