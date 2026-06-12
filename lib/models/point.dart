@@ -1,5 +1,21 @@
 import 'dart:convert';
 
+/// Filter on the 查證結果 label: all points, only 違規, or only non-違規.
+enum VerificationFilter {
+  all('全部結果'),
+  illegal('違規'),
+  legal('非違規/其他');
+
+  final String label;
+  const VerificationFilter(this.label);
+
+  bool matches(ChangePoint p) => switch (this) {
+        all => true,
+        illegal => p.isIllegal,
+        legal => !p.isIllegal,
+      };
+}
+
 /// A land-use change detection point (變異點).
 class ChangePoint {
   final String uid; // "$city|$year|$caseId"

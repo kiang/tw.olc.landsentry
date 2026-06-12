@@ -21,7 +21,6 @@ class _ListScreenState extends State<ListScreen> {
   List<String> _types = [];
   bool _hasDataset = true;
   String _search = '';
-  bool _onlyIllegal = false;
 
   @override
   void initState() {
@@ -55,8 +54,8 @@ class _ListScreenState extends State<ListScreen> {
   }
 
   List<ChangePoint> get _filtered {
-    var list = _points;
-    if (_onlyIllegal) list = list.where((p) => p.isIllegal).toList();
+    var list =
+        _points.where(_state.verification.matches).toList();
     if (_search.isNotEmpty) {
       list = list
           .where((p) =>
@@ -81,28 +80,14 @@ class _ListScreenState extends State<ListScreen> {
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    decoration: const InputDecoration(
-                      hintText: '搜尋編號 / 類型 / 權責單位',
-                      prefixIcon: Icon(Icons.search),
-                      isDense: true,
-                      border: OutlineInputBorder(),
-                    ),
-                    onChanged: (v) => setState(() => _search = v.trim()),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                FilterChip(
-                  label: const Text('違規'),
-                  selected: _onlyIllegal,
-                  selectedColor:
-                      AppConstants.illegalColor.withValues(alpha: 0.2),
-                  onSelected: (v) => setState(() => _onlyIllegal = v),
-                ),
-              ],
+            child: TextField(
+              decoration: const InputDecoration(
+                hintText: '搜尋編號 / 類型 / 權責單位',
+                prefixIcon: Icon(Icons.search),
+                isDense: true,
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (v) => setState(() => _search = v.trim()),
             ),
           ),
           Expanded(

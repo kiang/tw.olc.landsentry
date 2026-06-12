@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'constants.dart';
+import 'models/point.dart';
 
 /// App-wide state: currently selected dataset filters, shared by the
 /// map and list screens, plus a change counter screens listen to for
@@ -13,10 +14,12 @@ class AppState extends ChangeNotifier {
   String _city = AppConstants.defaultCity;
   int _year = AppConstants.currentRocYear;
   String _type = 'all';
+  VerificationFilter _verification = VerificationFilter.all;
 
   String get city => _city;
   int get year => _year;
   String get type => _type;
+  VerificationFilter get verification => _verification;
 
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
@@ -39,6 +42,12 @@ class AppState extends ChangeNotifier {
   void setType(String type) {
     if (type == _type) return;
     _type = type;
+    notifyListeners();
+  }
+
+  void setVerification(VerificationFilter v) {
+    if (v == _verification) return;
+    _verification = v;
     notifyListeners();
   }
 

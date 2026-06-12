@@ -55,13 +55,14 @@ class _MapScreenState extends State<MapScreen> {
     final db = AppDatabase.instance;
 
     final hasDataset = await db.hasDataset(city, year);
-    final points =
+    var points =
         hasDataset ? await db.getPoints(city, year, type: type) : <ChangePoint>[];
+    points = points.where(_state.verification.matches).toList();
     final types = hasDataset ? await db.getTypes(city, year) : <String>[];
     final tracked = await db.getTrackedUids();
 
     if (!mounted) return;
-    final key = '$city|$year|$type';
+    final key = '$city|$year|$type|${_state.verification.name}';
     final datasetChanged = key != _loadedKey;
     setState(() {
       _points = points;

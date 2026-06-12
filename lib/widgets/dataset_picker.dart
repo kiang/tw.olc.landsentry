@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app_state.dart';
 import '../constants.dart';
+import '../models/point.dart';
 import '../services/api.dart';
 
 /// City / year / type filter bar shared by the map and list screens.
@@ -54,6 +55,26 @@ class DatasetFilterBar extends StatelessWidget {
                 ],
                 onChanged: (t) {
                   if (t != null) state.setType(t);
+                },
+              ),
+              const SizedBox(width: 12),
+              DropdownButton<VerificationFilter>(
+                value: state.verification,
+                underline: const SizedBox.shrink(),
+                items: VerificationFilter.values
+                    .map((v) => DropdownMenuItem(
+                        value: v,
+                        child: Text(
+                          v.label,
+                          style: v == VerificationFilter.illegal
+                              ? TextStyle(
+                                  color: AppConstants.illegalColor,
+                                  fontWeight: FontWeight.bold)
+                              : null,
+                        )))
+                    .toList(),
+                onChanged: (v) {
+                  if (v != null) state.setVerification(v);
                 },
               ),
             ],
